@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       systemInstruction: `You are a computer vision model.
-Your task is to describe visible elements in an image.
-Do not infer intent, health, or emergency.
-Describe only what is directly visible.
-Always return valid JSON.`,
+        Your task is to describe visible elements in an image.
+        Do not infer intent, health, or emergency.
+        Describe only what is directly visible.
+        Always return valid JSON.`,
       contents: [
         {
           parts: [

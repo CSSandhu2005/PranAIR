@@ -8,39 +8,38 @@ import {
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { usePathname, useRouter } from "next/navigation";
 
-type AgentType = "agent1" | "agent2" | "agent3";
-
-interface SidebarDemoProps {
-  activeAgent: AgentType;
-  onAgentChange: (agent: AgentType) => void;
-}
-
-export function SidebarDemo({ activeAgent, onAgentChange }: SidebarDemoProps) {
+export function SidebarDemo() {
   const { user } = useUser();
   const [open, setOpen] = useState(false);
+  const pathname = usePathname(); // Get current route
+  const router = useRouter();
 
   const agentLinks = [
     {
-      id: "agent1" as AgentType,
+      id: "agent1",
       label: "Agent 1",
       subtitle: "Human Distress",
+      href: "/dashboard/agent1",
       icon: (
         <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
     {
-      id: "agent2" as AgentType,
+      id: "agent2",
       label: "Agent 2",
-      subtitle: "Coming Soon",
+      subtitle: "Clinical CDS",
+      href: "/dashboard/agent2",
       icon: (
         <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
     {
-      id: "agent3" as AgentType,
+      id: "agent3",
       label: "Agent 3",
       subtitle: "Coming Soon",
+      href: "/dashboard/agent3",
       icon: (
         <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
@@ -50,22 +49,40 @@ export function SidebarDemo({ activeAgent, onAgentChange }: SidebarDemoProps) {
   return (
     <div
       className={cn(
-        "mx-auto flex w-full flex-1 flex-col overflow-hidden bg-gray-100 md:flex-row dark:bg-neutral-800",
-        "h-screen",
+        "flex flex-col h-full bg-gray-100 md:flex-row dark:bg-neutral-800",
+        "h-screen" 
       )}
     >
       <Sidebar open={open} setOpen={setOpen}>
         <SidebarBody className="justify-between gap-10">
           <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
-            {open ? <Logo /> : <LogoIcon />}
-            <div className="mt-8 flex flex-col gap-2">
+            {/* Account Name at Top */}
+            <div className="mb-6">
+                 <SidebarLink
+                  link={{
+                    label: user?.fullName || user?.username || "Guest User",
+                    href: "#",
+                    icon: (
+                      <img
+                        src={user?.imageUrl || "https://assets.aceternity.com/manu.png"}
+                        className="h-7 w-7 shrink-0 rounded-full"
+                        width={50}
+                        height={50}
+                        alt="Avatar"
+                      />
+                    ),
+                  }}
+                />
+            </div>
+
+            <div className="flex flex-col gap-2">
               {agentLinks.map((agent) => (
                 <button
                   key={agent.id}
-                  onClick={() => onAgentChange(agent.id)}
+                  onClick={() => router.push(agent.href)}
                   className={cn(
                     "flex items-center justify-start gap-2 group/sidebar py-3 px-2 rounded-md transition-all duration-200",
-                    activeAgent === agent.id
+                    pathname?.startsWith(agent.href)
                       ? "bg-red-500/10 border-l-2 border-red-500"
                       : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
                   )}
@@ -81,7 +98,7 @@ export function SidebarDemo({ activeAgent, onAgentChange }: SidebarDemoProps) {
                     <span
                       className={cn(
                         "text-sm font-medium whitespace-pre",
-                        activeAgent === agent.id
+                        pathname?.startsWith(agent.href)
                           ? "text-red-600 dark:text-red-400"
                           : "text-neutral-700 dark:text-neutral-200"
                       )}
@@ -97,21 +114,6 @@ export function SidebarDemo({ activeAgent, onAgentChange }: SidebarDemoProps) {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <SidebarLink
-              link={{
-                label: user?.fullName || user?.username || "User",
-                href: "#",
-                icon: (
-                  <img
-                    src={user?.imageUrl || "https://assets.aceternity.com/manu.png"}
-                    className="h-7 w-7 shrink-0 rounded-full"
-                    width={50}
-                    height={50}
-                    alt="Avatar"
-                  />
-                ),
-              }}
-            />
             <SignOutButton redirectUrl="/">
               <button className="flex items-center justify-start gap-2 group/sidebar py-2 px-3 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 transition-all duration-200 text-red-600 dark:text-red-400">
                 <IconArrowLeft className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
