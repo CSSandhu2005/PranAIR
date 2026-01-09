@@ -3,56 +3,50 @@ import React, { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import {
   IconArrowLeft,
-  IconBrandTabler,
-  IconSettings,
-  IconUserBolt,
-  IconActivity,
-  IconDrone,
+  IconRobot,
 } from "@tabler/icons-react";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
-export function SidebarDemo() {
+type AgentType = "agent1" | "agent2" | "agent3";
+
+interface SidebarDemoProps {
+  activeAgent: AgentType;
+  onAgentChange: (agent: AgentType) => void;
+}
+
+export function SidebarDemo({ activeAgent, onAgentChange }: SidebarDemoProps) {
   const { user } = useUser();
-  const links = [
+  const [open, setOpen] = useState(false);
+
+  const agentLinks = [
     {
-      label: "Dashboard",
-      href: "#",
+      id: "agent1" as AgentType,
+      label: "Agent 1",
+      subtitle: "Human Distress",
       icon: (
-        <IconBrandTabler className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
     {
-      label: "Drone Fleet",
-      href: "#",
+      id: "agent2" as AgentType,
+      label: "Agent 2",
+      subtitle: "Coming Soon",
       icon: (
-        <IconDrone className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
     {
-      label: "Activity",
-      href: "#",
+      id: "agent3" as AgentType,
+      label: "Agent 3",
+      subtitle: "Coming Soon",
       icon: (
-        <IconActivity className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-      ),
-    },
-    {
-      label: "Profile",
-      href: "#",
-      icon: (
-        <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-      ),
-    },
-    {
-      label: "Settings",
-      href: "#",
-      icon: (
-        <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
   ];
-  const [open, setOpen] = useState(false);
+
   return (
     <div
       className={cn(
@@ -65,8 +59,40 @@ export function SidebarDemo() {
           <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
             {open ? <Logo /> : <LogoIcon />}
             <div className="mt-8 flex flex-col gap-2">
-              {links.map((link, idx) => (
-                <SidebarLink key={idx} link={link} />
+              {agentLinks.map((agent) => (
+                <button
+                  key={agent.id}
+                  onClick={() => onAgentChange(agent.id)}
+                  className={cn(
+                    "flex items-center justify-start gap-2 group/sidebar py-3 px-2 rounded-md transition-all duration-200",
+                    activeAgent === agent.id
+                      ? "bg-red-500/10 border-l-2 border-red-500"
+                      : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  )}
+                >
+                  {agent.icon}
+                  <motion.div
+                    animate={{
+                      display: open ? "flex" : "none",
+                      opacity: open ? 1 : 0,
+                    }}
+                    className="flex flex-col items-start"
+                  >
+                    <span
+                      className={cn(
+                        "text-sm font-medium whitespace-pre",
+                        activeAgent === agent.id
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-neutral-700 dark:text-neutral-200"
+                      )}
+                    >
+                      {agent.label}
+                    </span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {agent.subtitle}
+                    </span>
+                  </motion.div>
+                </button>
               ))}
             </div>
           </div>
@@ -103,7 +129,6 @@ export function SidebarDemo() {
           </div>
         </SidebarBody>
       </Sidebar>
-      <Dashboard />
     </div>
   );
 }
@@ -134,65 +159,5 @@ export const LogoIcon = () => {
     >
       <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-red-500 dark:bg-red-400" />
     </a>
-  );
-};
-
-// Dashboard component with PranAIR content
-const Dashboard = () => {
-  return (
-    <div className="flex flex-1">
-      <div className="flex h-full w-full flex-1 flex-col gap-2 rounded-tl-2xl border border-neutral-200 bg-white p-2 md:p-10 dark:border-neutral-700 dark:bg-neutral-900">
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-4xl font-bold text-neutral-800 dark:text-neutral-100">
-            Welcome to PranAIR Dashboard
-          </h1>
-          <p className="text-neutral-600 dark:text-neutral-400 mt-2">
-            AI-powered drone emergency response system for rapid crisis management
-          </p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="flex gap-2">
-          {[
-            { label: "Active Drones", value: "12" },
-            { label: "Response Time", value: "2.3s" },
-            { label: "Coverage Area", value: "450 km²" },
-            { label: "Emergencies", value: "8" },
-          ].map((stat, idx) => (
-            <div
-              key={"stat-" + idx}
-              className="h-32 w-full rounded-lg bg-linear-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 p-4 flex flex-col justify-between border border-neutral-200 dark:border-neutral-700"
-            >
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
-                {stat.label}
-              </p>
-              <p className="text-2xl md:text-3xl font-bold text-neutral-800 dark:text-neutral-100">
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Content Grid */}
-        <div className="flex flex-1 gap-2">
-          <div className="h-full w-full rounded-lg bg-linear-to-br from-neutral-50 to-neutral-100 dark:from-neutral-800 dark:to-neutral-900 border border-neutral-200 dark:border-neutral-700 p-6">
-            <h2 className="text-xl font-semibold text-neutral-800 dark:text-neutral-100 mb-4">
-              Recent Activity
-            </h2>
-            <p className="text-neutral-600 dark:text-neutral-400">
-              No recent emergency responses to display.
-            </p>
-          </div>
-          <div className="h-full w-full rounded-lg bg-linear-to-br from-neutral-50 to-neutral-100 dark:from-neutral-800 dark:to-neutral-900 border border-neutral-200 dark:border-neutral-700 p-6">
-            <h2 className="text-xl font-semibold text-neutral-800 dark:text-neutral-100 mb-4">
-              Drone Status
-            </h2>
-            <p className="text-neutral-600 dark:text-neutral-400">
-              All systems operational.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 };
