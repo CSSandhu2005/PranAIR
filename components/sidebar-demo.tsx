@@ -1,10 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import {
-  IconArrowLeft,
-  IconRobot,
-} from "@tabler/icons-react";
+import { IconArrowLeft, IconRobot } from "@tabler/icons-react";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -44,13 +41,22 @@ export function SidebarDemo() {
         <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
+    {
+      id: "agent4",
+      label: "Agent 4",
+      subtitle: "PranAIR Emergency AI",
+      href: "/dashboard/agent4",
+      icon: (
+        <IconRobot className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
   ];
 
   return (
     <div
       className={cn(
         "flex flex-col h-full bg-gray-100 md:flex-row dark:bg-neutral-800",
-        "h-screen" 
+        "h-screen"
       )}
     >
       <Sidebar open={open} setOpen={setOpen}>
@@ -58,21 +64,24 @@ export function SidebarDemo() {
           <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
             {/* Account Name at Top */}
             <div className="mb-6">
-                 <SidebarLink
-                  link={{
-                    label: user?.fullName || user?.username || "Guest User",
-                    href: "#",
-                    icon: (
-                      <img
-                        src={user?.imageUrl || "https://assets.aceternity.com/manu.png"}
-                        className="h-7 w-7 shrink-0 rounded-full"
-                        width={50}
-                        height={50}
-                        alt="Avatar"
-                      />
-                    ),
-                  }}
-                />
+              <SidebarLink
+                link={{
+                  label: user?.fullName || user?.username || "Guest User",
+                  href: "#",
+                  icon: (
+                    <img
+                      src={
+                        user?.imageUrl ||
+                        "https://assets.aceternity.com/manu.png"
+                      }
+                      className="h-7 w-7 shrink-0 rounded-full"
+                      width={50}
+                      height={50}
+                      alt="Avatar"
+                    />
+                  ),
+                }}
+              />
             </div>
 
             <div className="flex flex-col gap-2">

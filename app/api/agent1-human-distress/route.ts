@@ -1,177 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
 
-// Agent 1: Human Distress Detection
-// Analyzes images for visible signs of human distress using Gemini 2.0 Flash (General Vision)
-// REFACTORED: Uses gemini-2.0-flash with inline data to bypass 2.5 safety blocks
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // Verify API key is available
-    if (!process.env.GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY is not set in environment variables");
+    if (!process.env.HF_API_KEY) {
       return NextResponse.json(
-        { error: "Gemini API key not configured. Please check environment variables." },
+        { error: "HF_API_KEY missing" },
         { status: 500 }
       );
     }
 
-    const formData = await request.formData();
+    const formData = await req.formData();
     const image = formData.get("image") as File;
 
     if (!image) {
-      return NextResponse.json(
-        { error: "No image provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No image" }, { status: 400 });
     }
 
-    console.log("Processing image:", image.name, image.type, image.size, "bytes");
+    const buffer = Buffer.from(await image.arrayBuffer());
 
-    // Convert to inline base64 (Standard for 2.0 Flash)
-    const arrayBuffer = await image.arrayBuffer();
-    const base64Image = Buffer.from(arrayBuffer).toString("base64");
-
-    // Initialize Gemini AI
-    const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    });
-
-    console.log("Sending request to Gemini 2.0 Flash...");
-
-    // Generate content with Gemini 2.0 Flash
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      systemInstruction: `You are a computer vision model.
-        Your task is to describe visible elements in an image.
-        Do not infer intent, health, or emergency.
-        Describe only what is directly visible.
-        Always return valid JSON.`,
-      contents: [
-        {
-          parts: [
-            {
-              inlineData: {
-                mimeType: image.type,
-                data: base64Image,
-              },
-            },
-            {
-              text: "Describe the visible scene in the image. Base responses strictly on visual evidence. Return JSON only.",
-            },
-          ],
+    const response = await fetch(
+      "https://router.huggingface.co/hf-inference/models/facebook/detr-resnet-50",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_KEY}`,
+          "Content-Type": image.type || "image/jpeg",
+          Accept: "application/json",
         },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "object",
-          properties: {
-            personVisible: { type: "boolean" },
-            numberOfPeople: { type: "number" },
-            posture: {
-              type: "string",
-              enum: ["standing", "sitting", "lying", "collapsed", "unknown"],
-            },
-            movementVisible: { type: "boolean" },
-            visibleObjects: {
-              type: "array",
-              items: { type: "string" },
-            },
-            environment: { type: "string" },
-            confidence: { type: "number" },
-          },
-          required: [
-            "personVisible",
-            "numberOfPeople",
-            "posture",
-            "movementVisible",
-            "confidence",
-          ],
-        },
-      },
-    });
-
-    // Debug: Log full response structure
-    console.log("Full Gemini response:", JSON.stringify(response, null, 2));
-
-    const candidates = response.candidates;
-    
-    if (!candidates || candidates.length === 0) {
-      console.error("No candidates in Gemini response");
-      if (response.promptFeedback) {
-        console.error("Prompt feedback:", JSON.stringify(response.promptFeedback, null, 2));
+        body: buffer,
       }
+    );
+
+    const text = await response.text();
+
+    // If model is still loading
+    if (!text.trim().startsWith("[")) {
+      console.log("HF RAW RESPONSE:", text);
       return NextResponse.json(
-        { error: "Failed to analyze image - no response from AI" },
-        { status: 500 }
+        { error: "Vision model warming up. Try again in 10 seconds." },
+        { status: 503 }
       );
     }
 
-    // Extract JSON text
-    const text = candidates[0].content?.parts?.[0]?.text;
+    const detections = JSON.parse(text);
 
-    if (!text) {
-      console.error("No text in Gemini response");
-      return NextResponse.json(
-        { error: "Failed to analyze image - empty response" },
-        { status: 500 }
-      );
-    }
+    const people = detections.filter((d: any) => d.label === "person");
 
-    // Parse JSON
-    let analysisData;
-    try {
-      analysisData = JSON.parse(text);
-      console.log("Parsed analysis data:", analysisData);
-    } catch (e) {
-      console.error("Failed to parse JSON:", e);
-      return NextResponse.json(
-        { error: "Invalid JSON response from AI" },
-        { status: 500 }
-      );
-    }
+    const confidence =
+      people.length > 0 ? Math.max(...people.map((p: any) => p.score)) : 0;
 
-    // Map to frontend expectations
-    // Infer urgency from neutral posture data
-    let derivedUrgency = "Low";
-    if (analysisData.posture === "collapsed" || analysisData.posture === "lying") {
-      derivedUrgency = "Critical"; 
-    } else if (analysisData.posture === "sitting" && analysisData.movementVisible === false) {
-      derivedUrgency = "Medium";
-    }
-
-    const mappedAnalysis = {
-      humanVisible: analysisData.personVisible,
-      numberOfPeople: analysisData.numberOfPeople,
-      bodyPosture: analysisData.posture,
-      visibleBlood: false, 
-      visibleInjuries: [], 
-      signsOfDistress: analysisData.visibleObjects || [],
-      environmentalHazards: [],
-      movementObserved: analysisData.movementVisible,
-      personLyingDown: analysisData.posture === "lying" || analysisData.posture === "collapsed",
-      appearsMotionless: !analysisData.movementVisible,
-      urgencyLevel: derivedUrgency,
-      lifeThreat: derivedUrgency,
-      reasoning: analysisData.environment || "Visual scene analysis.",
-      summary: analysisData.environment || "Scene analysis.",
-      confidence: analysisData.confidence,
-    };
+    const urgency =
+      people.length === 0 ? "Low" : confidence > 0.7 ? "High" : "Medium";
 
     return NextResponse.json({
       success: true,
-      analysis: mappedAnalysis,
-      timestamp: new Date().toISOString(),
-    });
-
-  } catch (error: any) {
-    console.error("Agent 1 error:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to analyze image",
-        message: error.message || "Unknown error occurred",
+      analysis: {
+        humanVisible: people.length > 0,
+        numberOfPeople: people.length,
+        bodyPosture: "unknown",
+        visibleBlood: false,
+        signsOfDistress: people.length ? ["Human detected"] : [],
+        movementObserved: false,
+        personLyingDown: false,
+        appearsMotionless: false,
+        urgencyLevel: urgency,
+        lifeThreat: urgency,
+        summary:
+          people.length > 0
+            ? "Human detected in the scene"
+            : "No person detected",
+        confidence,
       },
+    });
+  } catch (err: any) {
+    console.error("Agent 1 HF Error:", err);
+    return NextResponse.json(
+      { error: "Vision failed", message: err.message },
       { status: 500 }
     );
   }
